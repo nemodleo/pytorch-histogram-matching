@@ -45,15 +45,20 @@ class Histogram_Matching(nn.Module):
         # [B*C 256]
         hists = torch.bmm(hists[:,None,:], triu)[:,0,:]
         return hists
-    
+
     def cal_trans(self, hist_dst, hist_ref):
         # [B*C 256]
         table = torch.arange(256, device=hist_dst.device).repeat(len(hist_dst), 1)
         for bc in range(len(table)):
-            for i in list(range(1, 256)):
-                for j in list(range(1, 256)):
-                    if hist_dst[bc, i] >= hist_ref[bc, j - 1] and hist_dst[bc, i] <= hist_ref[bc, j]:
-                        table[bc, i] = j
-                        break
+            i = j = 1
+            while i < 256:
+                if j >= 256:
+                    table[bc, i] = 255
+                    i += 1
+                elif hist_dst[bc, i] >= hist_ref[bc, j - 1] and hist_dst[bc, i] <= hist_ref[bc, j]:
+                    table[bc, i] = j
+                    i += 1
+                else:
+                    j += 1
         table[:, 255] = 255
         return table
