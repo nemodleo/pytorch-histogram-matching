@@ -1,1 +1,1 @@
-# pytorch-histogram-matching-loss
+# pytorch-histogram-matching
