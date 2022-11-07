@@ -23,7 +23,6 @@ def test_histogram_matching():
         assert rst.requires_grad == True, f"rst.requires_grad:{rst.requires_grad == True} != True"
         rst = transforms.ToPILImage()(rst[0])
         rst.save('src/rst.jpg')
-        # print(rst*255)
     except Exception as e:
         print(f"[!] Histogram_Matching has a problem:\n\n {e}")
 
