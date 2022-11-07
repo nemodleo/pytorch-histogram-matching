@@ -12,16 +12,18 @@ def test_histogram_matching():
         ref = np.array(ref)
         dst = transforms.ToTensor()(dst)[None]
         ref = transforms.ToTensor()(ref)[None]
+        dst.requires_grad = True
+        ref.requires_grad = True
         # gpu
         dst = dst.cuda()
         ref = ref.cuda()
         # histogram matching
-        HM = Histogram_Matching()
+        HM = Histogram_Matching(differentiable=True)
         rst = HM(dst, ref)
-        # post and save
+        assert rst.requires_grad == True, f"rst.requires_grad:{rst.requires_grad == True} != True"
         rst = transforms.ToPILImage()(rst[0])
         rst.save('src/rst.jpg')
-        print(dst)
+        # print(rst*255)
     except Exception as e:
         print(f"[!] Histogram_Matching has a problem:\n\n {e}")
 

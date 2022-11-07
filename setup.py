@@ -3,7 +3,7 @@ import setuptools
 with open('README.md', 'r') as f:
     long_description = f.read()
 
-version = '0.0.3'
+version = '0.0.4'
 
 setuptools.setup(
     name='pytorch_histogram_matching',
