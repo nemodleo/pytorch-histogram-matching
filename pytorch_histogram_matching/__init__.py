@@ -17,7 +17,7 @@ class Histogram_Matching(nn.Module):
         hist_dst = self.cal_hist(dst)
         hist_ref = self.cal_hist(ref)
         # [B*C 256]
-        tables = self.cal_trans(hist_dst, hist_ref)
+        tables = self.cal_trans_batch(hist_dst, hist_ref)
         # [B C H W]
         rst = dst.clone()
         for b in range(B):
@@ -44,21 +44,19 @@ class Histogram_Matching(nn.Module):
         hists = torch.bmm(hists[:,None,:], triu)[:,0,:]
         return hists
 
-    def cal_trans(self, hist_dst, hist_ref):
+    def cal_trans_batch(self, hist_dst, hist_ref):
+        # [B*C 256 256]
+        hist_dst = hist_dst[:,None,:].repeat(1,256,1)
+        # [B*C 256 256]
+        hist_ref = hist_ref[:,:,None].repeat(1,1,256)
+        # [B*C 256 256]
+        table = hist_dst - hist_ref
+        # [B*C 256 256]
+        table = torch.where(table>=0, 1., 0.)
         # [B*C 256]
-        table = torch.arange(256, device=hist_dst.device).repeat(len(hist_dst), 1)
-        for bc in range(len(table)):
-            i = j = 1
-            while i < 256:
-                if j >= 256:
-                    table[bc, i] = 255
-                    i += 1
-                elif hist_dst[bc, i] >= hist_ref[bc, j - 1] and hist_dst[bc, i] <= hist_ref[bc, j]:
-                    table[bc, i] = j
-                    i += 1
-                else:
-                    j += 1
-        table[:, 255] = 255
+        table = torch.sum(table, dim=1) - 1
+        # [B*C 256]
+        table = torch.clamp(table, min=0, max=255)
         return table
 
     def soft_histc_batch(self, x, bins=256, min=0, max=255, sigma=3*25):
