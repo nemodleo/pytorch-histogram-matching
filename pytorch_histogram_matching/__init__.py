@@ -26,12 +26,12 @@ class Histogram_Matching(nn.Module):
         # [B C H W]
         rst /= 255.
         return rst
-        
+
     def cal_hist(self, img):
         B, C, H, W = img.size()
         # [B*C 256]
         if self.differentiable: 
-            hists = self.soft_histc_batch(img * 255, bins=256, min=0, max=255, sigma=3*25)
+            hists = self.soft_histc_batch(img * 255, bins=256, min=0, max=256, sigma=3*25)
         else:
             hists = torch.stack([torch.histc(img[b,c] * 255, bins=256, min=0, max=255) for b in range(B) for c in range(C)])
         hists = hists.float()
@@ -43,6 +43,33 @@ class Histogram_Matching(nn.Module):
         # [B*C 256]
         hists = torch.bmm(hists[:,None,:], triu)[:,0,:]
         return hists
+
+    def soft_histc_batch(self, x, bins=256, min=0, max=256, sigma=3*25):
+        # B C H W
+        B, C, H, W = x.size()
+        # [B*C H*W]
+        x = x.view(B*C, -1)
+        # 1
+        delta = float(max - min) / float(bins)
+        # [256]
+        centers = float(min) + delta * (torch.arange(bins, device=x.device, dtype=torch.bfloat16) + 0.5)
+        # [B*C 1 H*W]
+        x = torch.unsqueeze(x, 1)
+        # [1 256 1]
+        centers = centers[None,:,None]
+        # [B*C 256 H*W]
+        x = x - centers
+        # [B*C 256 H*W]
+        x = x.type(torch.bfloat16)
+        # [B*C 256 H*W]
+        x = torch.sigmoid(sigma * (x + delta/2)) - torch.sigmoid(sigma * (x - delta/2))
+        # [B*C 256]
+        x = x.sum(dim=2)
+        # [B*C 256]
+        x = x.type(torch.float32)
+        # prevent oom
+        # torch.cuda.empty_cache()
+        return x
 
     def cal_trans_batch(self, hist_dst, hist_ref):
         # [B*C 256 256]
@@ -58,26 +85,3 @@ class Histogram_Matching(nn.Module):
         # [B*C 256]
         table = torch.clamp(table, min=0, max=255)
         return table
-
-    def soft_histc_batch(self, x, bins=256, min=0, max=255, sigma=3*25):
-        # B C H W
-        B, C, H, W = x.size()
-        # [B*C H*W]
-        x = x.view(B*C, -1)
-        # 1
-        delta = float(max - min) / float(bins)
-        # [256]
-        centers = float(min) + delta * (torch.arange(bins, device=x.device).float() + 0.5)
-        # [B*C 1 H*W]
-        x = torch.unsqueeze(x, 1)
-        # [B*C 256 1]
-        centers = centers.unsqueeze(0).repeat(B*C, 1).unsqueeze(2)
-        # [B*C 256 H*W]
-        x = x - centers
-        # [B*C 256 H*W]
-        x = torch.sigmoid(sigma * (x + delta/2)) - torch.sigmoid(sigma * (x - delta/2))
-        # [B*C 256]
-        x = x.sum(dim=2)
-        # [B*C 256]
-        return x
-

@@ -10,8 +10,8 @@ pip install pytorch_histogram_matching
 from pytorch_histogram_matching import Histogram_Matching
 
 import torch
-dst = torch.randint(0, 256, (4, 3, 512,512)).cuda() / 255.
-ref = torch.randint(0, 256, (4, 3, 512,512)).cuda() / 255.
+dst = torch.randint(0, 256, (8, 3, 512,512)).cuda() / 255.
+ref = torch.randint(0, 256, (8, 3, 512,512)).cuda() / 255.
 
 dst.requires_grad = True
 ref.requires_grad = True
